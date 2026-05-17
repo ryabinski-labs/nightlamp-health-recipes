@@ -1,0 +1,69 @@
+name: Recipe request
+description: Propose a new health-check recipe for a specific failure scenario.
+title: "[recipe] "
+labels: ["recipe-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a recipe. We prioritize scenarios where you (or
+        someone you know) have actually hit the failure in production. Generic
+        "monitor everything" requests are usually closed.
+
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario in one sentence
+      placeholder: "Bubble + Stripe live webhook silently drops events after going live"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Primary audience
+      multiple: true
+      options:
+        - bubble
+        - lovable
+        - cursor
+        - webflow
+        - flutterflow
+        - no-code
+        - ai-built
+        - generic
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Customer-visible symptoms
+      description: One per line.
+      placeholder: |
+        - Test mode webhooks work but live mode never triggers the workflow
+        - Stripe dashboard shows successful delivery
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: Underlying failure modes you have seen
+      placeholder: |
+        - Endpoint still contains /version-test
+        - Workflow requires authentication but Stripe doesn't send it
+    validations:
+      required: true
+
+  - type: textarea
+    id: existing_workaround
+    attributes:
+      label: How you currently detect or diagnose this
+      placeholder: "Manual test with Stripe CLI after every deploy; CRM check at end of day."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: References, logs, or community threads
+      placeholder: "https://forum.bubble.io/t/..."

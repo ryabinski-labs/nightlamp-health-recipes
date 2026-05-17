@@ -1,0 +1,85 @@
+id: checkout-path
+scenario: The checkout/buy page goes blank, slow, or 5xx right before payment.
+audience: [bubble, lovable, cursor, webflow, no-code, ai-built, generic]
+
+symptoms:
+  - Customers report a blank page on the buy/checkout URL.
+  - The checkout button does not respond, or the spinner never resolves.
+  - The page renders but the Stripe/PayPal/Square iframe never appears.
+
+failure_modes:
+  - A recent deploy changed the route path or removed the page.
+  - A third-party script (Stripe.js, analytics, fonts) is blocking render.
+  - The checkout page now requires login and is redirecting unauthenticated users away.
+  - A CSP or CORS change broke the payment SDK iframe.
+  - The page is 200ing but the body contains a friendly "we'll be right back" placeholder.
+
+checks:
+  - type: http_status
+    name: Checkout page returns 200
+    target: "https://{{your-app-domain}}/{{checkout_path}}"
+    method: GET
+    assert_status: 200
+    cadence_seconds: 120
+
+  - type: http_keyword
+    name: Checkout page contains payment SDK marker
+    target: "https://{{your-app-domain}}/{{checkout_path}}"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{payment_sdk_marker}}"
+    assert_keyword_absent: "we'll be right back"
+    cadence_seconds: 120
+    notes: |
+      `{{payment_sdk_marker}}` is a unique substring that only appears when
+      the SDK actually rendered, e.g. "js.stripe.com" or "checkout.js".
+      `assert_keyword_absent` catches maintenance placeholders that still 200.
+
+  - type: browser_journey
+    name: Checkout button is clickable and reveals payment iframe
+    cadence_seconds: 600
+    steps:
+      - action: goto
+        url: "https://{{your-app-domain}}/{{product_path}}"
+        timeout_seconds: 8
+      - action: click
+        selector: "role=button[name='{{buy_button_label}}']"
+        timeout_seconds: 5
+      - action: assert_visible
+        selector: "iframe[src*='{{payment_iframe_host}}']"
+        timeout_seconds: 8
+
+expected_signals:
+  pass:
+    - http_status 200
+    - http_keyword finds SDK marker and no maintenance string
+    - browser_journey reaches the assert_visible step
+  fail:
+    - http_status 5xx or 404
+    - http_keyword body contains a maintenance/placeholder string
+    - browser_journey times out on the button click or iframe visibility
+
+false_positives:
+  - Payment SDK can lag during marketing campaigns; raise cadence + grace before paging.
+  - Browser journey can fail if the locale/AB-test variant changes the button label.
+
+triage:
+  - Open the checkout page in an incognito browser. Does the SDK iframe render?
+  - Check the browser console for blocked-script errors (CSP, mixed content, third-party fail).
+  - Compare the current route to the last known good URL; check recent deploys.
+  - If `assert_keyword_absent` fired on "we'll be right back", the page is up but in maintenance mode.
+  - Roll back the last deploy if the failure correlates with deploy time.
+
+alert_routing:
+  severity: page
+  channel: oncall-revenue
+  suppress_when:
+    - scheduled-maintenance
+    - payment-provider-status-incident
+
+references:
+  - https://stripe.com/docs/payments/checkout
+  - https://web.dev/measure/
+
+last_reviewed: "2026-05-17"
+owner: maintainers

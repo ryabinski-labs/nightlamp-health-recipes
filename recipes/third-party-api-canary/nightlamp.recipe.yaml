@@ -1,0 +1,65 @@
+id: third-party-api-canary
+scenario: A vendor (Stripe, Twilio, OpenAI, Mapbox, etc.) degrades, rate-limits, or returns malformed responses.
+audience: [generic, no-code, ai-built]
+
+symptoms:
+  - Customer-facing feature that wraps the vendor stops working or feels slow.
+  - Vendor status page is green but your app is failing.
+  - Sudden spike in 429 (rate limit) or 5xx from the vendor.
+
+failure_modes:
+  - Vendor outage not yet on the status page.
+  - Your account hit a usage or rate limit.
+  - The vendor changed an API contract (deprecated field, new required header).
+  - Your API key was rotated/revoked.
+  - DNS or TLS issue between your origin and the vendor.
+
+checks:
+  - type: api_canary
+    name: Vendor API responds with expected shape
+    cadence_seconds: 300
+    steps:
+      - method: GET
+        target: "{{vendor_canary_url}}"
+        headers:
+          authorization: "Bearer {{VENDOR_API_TOKEN}}"
+          accept: application/json
+        assert_status: 200
+        assert_keyword: "{{response_shape_marker}}"
+    notes: |
+      Use a vendor endpoint that is cheap, idempotent, and stable. Examples:
+      Stripe `/v1/balance`, Twilio `/2010-04-01/Accounts.json`, OpenAI
+      `/v1/models`. The keyword marker is something always present in a
+      well-formed response (e.g. "object").
+
+expected_signals:
+  pass:
+    - 200 within reasonable latency, response contains the shape marker
+  fail:
+    - 401/403 (auth), 429 (rate limit), 5xx (vendor), or shape marker missing
+
+false_positives:
+  - Vendor maintenance windows for non-critical endpoints can return 503.
+  - Some vendors apply per-region throttles; canary may be hitting a hot region.
+
+triage:
+  - Check the vendor status page.
+  - Confirm the API key is still valid by hitting the canary URL with curl from your machine.
+  - Inspect the response for a deprecation header or warning field.
+  - "On 429 responses, review your usage dashboard and back off or request a limit raise."
+  - Check vendor support / community channels for ongoing incident chatter.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-integrations
+  suppress_when:
+    - vendor-status-page-incident
+    - scheduled-maintenance
+
+references:
+  - https://stripe.com/docs/api/balance/balance_object
+  - https://www.twilio.com/docs/usage/api
+  - https://platform.openai.com/docs/api-reference/models
+
+last_reviewed: "2026-05-17"
+owner: maintainers

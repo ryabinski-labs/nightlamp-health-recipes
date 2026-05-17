@@ -1,0 +1,88 @@
+id: auth-login-journey
+scenario: Login form renders but submission no longer leads to the authenticated app.
+audience: [bubble, lovable, cursor, no-code, ai-built, generic]
+
+symptoms:
+  - Customers can see the login form but the submit button does nothing visible.
+  - Submitting credentials reloads the page or returns a generic error.
+  - Login succeeds but the post-login redirect lands on a 404 or blank page.
+
+failure_modes:
+  - Auth endpoint URL or method changed after deploy.
+  - Session cookie attributes broke after a domain or SameSite change.
+  - The post-login redirect target was renamed or deleted.
+  - Identity provider (Auth0, Clerk, Supabase, Firebase) outage or rate limit.
+  - A CSRF token surface (hidden input, header) was removed and the backend now 403s.
+
+checks:
+  - type: browser_journey
+    name: Login → dashboard journey succeeds
+    cadence_seconds: 600
+    steps:
+      - action: goto
+        url: "https://{{your-app-domain}}/{{login_path}}"
+        timeout_seconds: 8
+      - action: fill
+        selector: "input[name='{{email_field}}']"
+        value: "{{LOGIN_EMAIL}}"
+        timeout_seconds: 4
+      - action: fill
+        selector: "input[name='{{password_field}}']"
+        value: "{{LOGIN_PASSWORD}}"
+        sensitive: true
+        timeout_seconds: 4
+      - action: click
+        selector: "role=button[name='{{login_button_label}}']"
+        timeout_seconds: 5
+      - action: wait_for_url
+        url: "{{dashboard_path}}"
+        match: contains
+        timeout_seconds: 8
+      - action: assert_visible
+        selector: "[data-testid='{{dashboard_marker}}']"
+        timeout_seconds: 6
+
+  - type: api_canary
+    name: Token endpoint returns a session
+    cadence_seconds: 600
+    steps:
+      - method: POST
+        target: "https://{{your-app-domain}}/{{auth_token_path}}"
+        headers:
+          content-type: application/json
+        body: '{"email":"{{LOGIN_EMAIL}}","password":"{{LOGIN_PASSWORD}}"}'
+        assert_status: 200
+        assert_keyword: "{{token_field_marker}}"
+
+expected_signals:
+  pass:
+    - browser_journey reaches the dashboard marker
+    - api_canary returns 200 and a token field marker
+  fail:
+    - browser_journey times out on wait_for_url or assert_visible
+    - api_canary returns 401/403 or omits the token field
+
+false_positives:
+  - The test account may be rate-limited if cadence is too aggressive.
+  - The dashboard marker may change during a marketing redesign.
+
+triage:
+  - Confirm the canary test account is not locked or rate-limited.
+  - Compare the auth endpoint path/method to the last known good config.
+  - Inspect Set-Cookie headers for SameSite/Secure/Domain regressions.
+  - Check identity provider status page for outages.
+  - Test login in incognito and capture the network panel through redirect.
+
+alert_routing:
+  severity: page
+  channel: oncall-auth
+  suppress_when:
+    - scheduled-maintenance
+    - identity-provider-status-incident
+
+references:
+  - https://owasp.org/www-community/Authentication_Cheat_Sheet
+  - https://web.dev/articles/samesite-cookies-explained
+
+last_reviewed: "2026-05-17"
+owner: maintainers

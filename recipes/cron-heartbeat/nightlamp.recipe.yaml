@@ -1,0 +1,69 @@
+id: cron-heartbeat
+scenario: A scheduled job stops running and nobody notices for a week.
+audience: [generic, no-code, ai-built]
+
+symptoms:
+  - A daily/hourly report stops arriving.
+  - A scheduled cleanup, billing run, or sync silently lapses.
+  - The job's logs go blank but the app surface looks normal.
+
+failure_modes:
+  - The scheduler itself (cron, GitHub Actions schedule, Bubble recurring event, Render cron) stopped.
+  - The job code throws but the error is swallowed and never alerted.
+  - A deploy removed the job definition; nobody noticed.
+  - The job depends on a credential that quietly expired.
+  - The job runs but exits 0 without doing anything (config drift).
+
+checks:
+  - type: heartbeat
+    name: Job pings Nightlamp at the end of each run
+    expected_interval_seconds: 3600
+    cadence_seconds: 60
+    notes: |
+      Set expected_interval_seconds to your job's actual cadence (3600 = hourly,
+      86400 = daily). Configure the job to POST to the heartbeat URL on
+      successful completion only. If no ping arrives within
+      expected_interval_seconds plus a small grace, the monitor opens an incident.
+
+  - type: http_keyword
+    name: Job output artifact exists and is recent
+    target: "{{job_output_url}}"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{recent_marker}}"
+    cadence_seconds: 1800
+    notes: |
+      `{{recent_marker}}` should be a date/timestamp that the job writes on
+      every run. Catches the "exits 0 but did nothing" case the heartbeat misses.
+
+expected_signals:
+  pass:
+    - Heartbeat received within expected_interval + grace
+    - Output artifact contains a recent marker
+  fail:
+    - No heartbeat in 1.5× the expected interval
+    - Output artifact missing the recent marker
+
+false_positives:
+  - First run after deploy can lag if the schedule offset moved.
+  - Grace window too tight will fire on legitimate cold-start delays.
+
+triage:
+  - Open the scheduler dashboard; confirm the job is still listed and enabled.
+  - Read the last run's logs; look for an exception that was swallowed.
+  - Confirm the job credentials (DB password, API token, S3 key) are still valid.
+  - Manually trigger the job; confirm it produces the expected output marker.
+  - Compare current job definition against the last known good config in source control.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://en.wikipedia.org/wiki/Dead_man%27s_switch
+  - https://healthchecks.io/docs/
+
+last_reviewed: "2026-05-17"
+owner: maintainers

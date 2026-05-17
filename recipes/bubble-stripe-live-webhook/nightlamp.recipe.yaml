@@ -1,0 +1,85 @@
+id: bubble-stripe-live-webhook
+scenario: Bubble + Stripe live webhook silently drops events after switching from test mode.
+audience: [bubble, no-code]
+
+symptoms:
+  - Test mode Stripe events trigger the Bubble workflow but live events do not.
+  - Stripe dashboard shows successful delivery (2xx) but the side effect never happens.
+  - Customers complete checkout but never receive the post-payment email/account.
+
+failure_modes:
+  - The endpoint URL in Stripe still contains /version-test (points at dev).
+  - The endpoint URL points at /initialize (one-time detection route).
+  - Test keys, live keys, and webhook signing secrets are mixed.
+  - The expected event type (e.g., checkout.session.completed) is not subscribed.
+  - The Bubble backend workflow requires authentication and Stripe is not sending it.
+  - The custom domain was changed after launch and the live webhook still points at bubbleapps.io.
+  - The workflow does too much work before returning 2xx and Stripe retries fire duplicates.
+
+checks:
+  - type: http_keyword
+    name: Stripe live webhook endpoint reachable and live-keyword present
+    target: "https://{{your-app-domain}}/api/1.1/wf/{{stripe_live_workflow_slug}}"
+    method: POST
+    headers:
+      content-type: application/json
+      stripe-signature: "{{STRIPE_SIGNATURE_PROBE}}"
+    body: '{"probe":"nightlamp","mode":"live"}'
+    assert_status: 200
+    assert_keyword_absent: version-test
+    cadence_seconds: 300
+    notes: |
+      The probe should hit a workflow path that 200s on any well-formed POST
+      and does no side effect. Absence of "version-test" in the response/URL
+      catches the most common Bubble misconfiguration.
+
+  - type: api_canary
+    name: Stripe webhook events table is fresh
+    cadence_seconds: 900
+    steps:
+      - method: GET
+        target: "https://{{your-app-domain}}/api/1.1/obj/stripe_event?limit=1&sort_field=created_date&descending=true"
+        headers:
+          authorization: "Bearer {{BUBBLE_API_TOKEN}}"
+        assert_status: 200
+        assert_keyword: created_date
+    notes: |
+      Reads the most recent stored Stripe event. If `last_reviewed` row is older
+      than expected, no live events are landing.
+
+expected_signals:
+  pass:
+    - http_keyword check returns 200 and body contains no "version-test"
+    - api_canary returns a stripe_event row whose created_date is within the last hour
+  fail:
+    - http_keyword 404 or 5xx
+    - http_keyword body contains "version-test"
+    - api_canary returns 401 (token rotated) or stripe_event row older than threshold
+
+false_positives:
+  - Stripe sends bursts; a single quiet hour at 03:00 UTC is not always a failure.
+  - The api_canary endpoint requires a Bubble API token that may itself rotate.
+
+triage:
+  - Open the Stripe dashboard, Developers → Webhooks, and confirm the endpoint URL does not contain "/version-test" or "/initialize".
+  - Confirm the endpoint is using the live signing secret matching the one stored in the Bubble workflow.
+  - Confirm the event type subscribed in Stripe matches what the Bubble workflow listens for.
+  - Send a test event from Stripe → Webhooks → "Send test webhook" and watch the Bubble logs for the workflow run.
+  - Confirm the workflow does not require authentication on the API entry point (or that Stripe's request includes it).
+  - If the custom domain recently changed, update the Stripe endpoint to the new domain.
+
+alert_routing:
+  severity: page
+  channel: oncall-payments
+  suppress_when:
+    - scheduled-maintenance
+    - stripe-status-page-incident
+
+references:
+  - https://docs.stripe.com/webhooks
+  - https://forum.bubble.io/t/stripe-live-webhook-not-working/390779
+  - https://forum.bubble.io/t/stripe-webhook-works-in-development-mode-but-not-in-live-mode-what-could-be-causing-this/382655
+  - https://nightlamp.app/guides/bubble-stripe-webhook-failures
+
+last_reviewed: "2026-05-17"
+owner: maintainers

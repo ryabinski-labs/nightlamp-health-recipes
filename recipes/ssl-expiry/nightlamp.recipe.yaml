@@ -1,0 +1,67 @@
+id: ssl-expiry
+scenario: TLS certificate quietly expires on a subdomain you forgot existed.
+audience: [generic, no-code, ai-built]
+
+symptoms:
+  - Browsers display a "your connection is not private" interstitial.
+  - API clients fail TLS handshake with NET::ERR_CERT_DATE_INVALID or x509 errors.
+  - Slack/Stripe/Twilio webhooks start failing because they refuse expired certs.
+
+failure_modes:
+  - Auto-renewal stopped (Let's Encrypt ACME challenge failing, expired account email, etc.).
+  - The cert was issued for the wrong SAN list and the subdomain you care about isn't covered.
+  - A CDN/edge proxy is serving a stale certificate that hasn't been refreshed.
+  - DNS change broke ACME http-01 validation on the renewal attempt.
+
+checks:
+  - type: ssl
+    name: Apex domain cert valid with 21+ days remaining
+    host: "{{your-apex-domain}}"
+    port: 443
+    days_before_expiry: 21
+    cadence_seconds: 3600
+
+  - type: ssl
+    name: API subdomain cert valid with 21+ days remaining
+    host: "api.{{your-apex-domain}}"
+    port: 443
+    days_before_expiry: 21
+    cadence_seconds: 3600
+
+  - type: ssl
+    name: Webhook subdomain cert valid with 21+ days remaining
+    host: "hooks.{{your-apex-domain}}"
+    port: 443
+    days_before_expiry: 21
+    cadence_seconds: 3600
+
+expected_signals:
+  pass:
+    - All hosts return valid certs covering the queried hostname with > threshold days remaining
+  fail:
+    - Any host returns an expired, untrusted, or SAN-mismatched cert
+    - Days remaining drops below the threshold
+
+false_positives:
+  - A cert that just renewed may still appear "old" on a CDN edge for a few minutes.
+  - Hosts behind SNI may legitimately serve different certs per Host header.
+
+triage:
+  - Run `openssl s_client -servername {{host}} -connect {{host}}:443 </dev/null 2>/dev/null | openssl x509 -noout -dates -subject`.
+  - Confirm the SAN list covers the failing hostname.
+  - Check the cert issuer; if auto-renewal is in use, look at the renewal logs.
+  - If ACME http-01 is used, confirm /.well-known/acme-challenge/ is reachable.
+  - Force a renewal and verify; clear CDN/edge caches.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-cert-renewal-window
+
+references:
+  - https://letsencrypt.org/docs/acme-protocol-updates/
+  - https://www.ssllabs.com/ssltest/
+
+last_reviewed: "2026-05-17"
+owner: maintainers

@@ -1,0 +1,71 @@
+id: lead-form-delivery
+scenario: Lead/contact form submits successfully but the lead never reaches the CRM, sheet, or inbox.
+audience: [bubble, webflow, no-code, ai-built, generic]
+
+symptoms:
+  - Form shows a green "thanks" message but the lead does not appear downstream.
+  - Sales reports a quiet week that does not match marketing traffic.
+  - The form post itself returns 200 but the destination (HubSpot, Zapier, Sheet, Mailchimp) shows nothing new.
+
+failure_modes:
+  - A Zap/Make/n8n workflow paused, ran out of tasks, or hit an auth error.
+  - The destination API key rotated and the form integration still uses the old one.
+  - A reCAPTCHA/honeypot change silently drops valid submissions as spam.
+  - The form route was renamed but the success message remained hardcoded.
+  - The CRM webhook URL was changed during a CRM migration.
+
+checks:
+  - type: api_canary
+    name: Lead form POST returns success marker
+    cadence_seconds: 900
+    steps:
+      - method: POST
+        target: "https://{{your-app-domain}}/{{lead_form_endpoint}}"
+        headers:
+          content-type: application/x-www-form-urlencoded
+        body: "name=Nightlamp+Canary&email=canary@{{canary_email_domain}}&message=automated+canary+do+not+reply"
+        assert_status: 200
+        assert_keyword: "{{success_marker}}"
+
+  - type: api_canary
+    name: Downstream destination received the canary lead
+    cadence_seconds: 1800
+    steps:
+      - method: GET
+        target: "{{destination_api_query_url}}"
+        headers:
+          authorization: "Bearer {{DESTINATION_API_TOKEN}}"
+        assert_status: 200
+        assert_keyword: "canary@{{canary_email_domain}}"
+
+expected_signals:
+  pass:
+    - Form POST returns the success marker
+    - Destination query returns a row whose email matches the canary address within the cadence window
+  fail:
+    - Form POST 4xx/5xx or success marker missing
+    - Destination query returns no row matching the canary address
+
+false_positives:
+  - Anti-spam services may classify the canary as junk if the cadence is too high or the email domain looks new.
+  - Some destinations batch ingestion — set the destination cadence equal to or longer than the slowest batching window.
+
+triage:
+  - Search the destination CRM/sheet/inbox for the canary email address.
+  - Open the Zap/Make/n8n history and look for failed runs, paused workflows, or auth errors.
+  - Confirm the destination API token is still valid.
+  - Submit a manual test from incognito and watch the network panel for the form POST + any background tracking calls.
+  - Check spam quarantine if delivery is via email.
+
+alert_routing:
+  severity: ticket
+  channel: marketing-ops
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://zapier.com/help/troubleshoot/behavior/error-messages
+  - https://developers.hubspot.com/docs/api/overview
+
+last_reviewed: "2026-05-17"
+owner: maintainers

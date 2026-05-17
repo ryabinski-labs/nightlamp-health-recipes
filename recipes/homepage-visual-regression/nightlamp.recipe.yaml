@@ -1,0 +1,76 @@
+id: homepage-visual-regression
+scenario: A theme, CSS, or asset deploy makes the landing page render blank, broken, or unstyled.
+audience: [webflow, no-code, ai-built, generic]
+
+symptoms:
+  - Landing page renders with no styles ("Flash of Unstyled Content" that never resolves).
+  - Hero image is missing or shows a broken-image icon.
+  - Page is technically up but visually broken; conversion drops to zero.
+
+failure_modes:
+  - A CSS or JS bundle URL changed after deploy; the page references the old one.
+  - A CDN purge removed assets that the page expects.
+  - A font/image CDN began returning 403 (referer policy change, hotlink protection).
+  - Theme migration left orphan classes; the rendered DOM no longer matches CSS.
+  - A no-code "publish" action half-completed and left the site mid-state.
+
+checks:
+  - type: visual_snapshot
+    name: Homepage matches baseline at 1440x900
+    target: "https://{{your-apex-domain}}/"
+    viewport: "1440x900"
+    diff_threshold_percent: 3.0
+    cadence_seconds: 900
+
+  - type: visual_snapshot
+    name: Homepage matches baseline at 390x844 (mobile)
+    target: "https://{{your-apex-domain}}/"
+    viewport: "390x844"
+    diff_threshold_percent: 5.0
+    cadence_seconds: 900
+
+  - type: http_keyword
+    name: Homepage references current asset bundle
+    target: "https://{{your-apex-domain}}/"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{current_bundle_marker}}"
+    cadence_seconds: 300
+    notes: |
+      `{{current_bundle_marker}}` is something present in the deploy's
+      bundle URL or a meta tag, e.g. "assets/main.abc123.css" or a git SHA
+      in a `<meta name="build">` tag. Catches "old HTML still cached" cases.
+
+expected_signals:
+  pass:
+    - Snapshot diff stays under threshold
+    - HTML references the current bundle marker
+  fail:
+    - Snapshot diff exceeds threshold (page visually changed)
+    - HTML references a stale bundle marker (cached/stale HTML)
+
+false_positives:
+  - Marketing banners, A/B variants, and seasonal hero changes trip the diff
+    unless the threshold accounts for them. Re-baseline after intentional changes.
+  - Mobile threshold is higher because viewport quirks add noise.
+
+triage:
+  - Compare the failing snapshot side-by-side with the baseline.
+  - Open the page in incognito; check Network for 404/403 on CSS/JS/font/image.
+  - Confirm the deploy completed; look for half-finished publishes.
+  - Verify CDN cache is purged for the homepage.
+  - Re-baseline only after the change is confirmed intentional.
+
+alert_routing:
+  severity: ticket
+  channel: marketing-ops
+  suppress_when:
+    - scheduled-deploy-window
+    - re-baselining-in-progress
+
+references:
+  - https://web.dev/articles/cls
+  - https://playwright.dev/docs/test-snapshots
+
+last_reviewed: "2026-05-17"
+owner: maintainers

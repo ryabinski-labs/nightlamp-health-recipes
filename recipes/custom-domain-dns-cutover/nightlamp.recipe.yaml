@@ -1,0 +1,80 @@
+id: custom-domain-dns-cutover
+scenario: A DNS edit moves customers to a misconfigured origin after a domain cutover.
+audience: [no-code, generic]
+
+symptoms:
+  - Customers report "site can't be reached" or wrong content on the apex/www domain.
+  - Some customers see the new site; others still see the old one for hours.
+  - HTTPS warnings about an unrelated certificate suddenly appear.
+
+failure_modes:
+  - A/AAAA/CNAME records were edited to point at an origin that is not serving the expected vhost.
+  - The new origin does not have a TLS cert for the cutover domain yet.
+  - TTL on the old records was too high; propagation is slow and uneven.
+  - Apex/www records are inconsistent (apex still points at old origin, www at new, or vice versa).
+  - Cloudflare or other CDN proxy was disabled/enabled mid-cutover.
+
+checks:
+  - type: http_status
+    name: Apex domain serves expected origin (200)
+    target: "https://{{your-apex-domain}}/"
+    method: GET
+    assert_status: 200
+    cadence_seconds: 60
+
+  - type: http_keyword
+    name: Apex domain serves the expected site marker (not a parking page)
+    target: "https://{{your-apex-domain}}/"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{site_unique_marker}}"
+    assert_keyword_absent: "domain for sale"
+    cadence_seconds: 120
+
+  - type: http_keyword
+    name: www subdomain matches apex
+    target: "https://www.{{your-apex-domain}}/"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{site_unique_marker}}"
+    cadence_seconds: 120
+
+  - type: ssl
+    name: TLS certificate for apex is valid and not for the wrong domain
+    host: "{{your-apex-domain}}"
+    port: 443
+    days_before_expiry: 14
+    cadence_seconds: 3600
+
+expected_signals:
+  pass:
+    - http_status 200 on apex
+    - Both apex and www return the same site marker
+    - SSL cert valid with the correct SAN
+  fail:
+    - http_status non-2xx or http_keyword fails on either host
+    - SSL cert invalid, expired, or for a different domain
+
+false_positives:
+  - During an active cutover, some probe regions will still hit the old records due to TTL.
+  - CDN may briefly serve a default page during a config push.
+
+triage:
+  - Run `dig +short A {{your-apex-domain}}` and compare against the expected origin IP.
+  - Run `dig +short CNAME www.{{your-apex-domain}}`.
+  - Test the URL through https://www.whatsmydns.net/ to spot uneven propagation.
+  - Open the URL in a browser; check the certificate Subject and SAN.
+  - If the CDN proxy is involved, confirm the origin pull rule is correct and TLS verify mode is the expected one.
+
+alert_routing:
+  severity: page
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-dns-cutover-window
+
+references:
+  - https://www.icann.org/resources/pages/dnssec-what-is-it-why-important-2019-03-05-en
+  - https://www.cloudflare.com/learning/dns/what-is-dns/
+
+last_reviewed: "2026-05-17"
+owner: maintainers

@@ -1,0 +1,38 @@
+name: Recipe bug
+description: A recipe is wrong, outdated, or harmful.
+title: "[recipe-bug] "
+labels: ["bug", "recipe"]
+body:
+  - type: input
+    id: recipe
+    attributes:
+      label: Recipe slug
+      placeholder: "bubble-stripe-live-webhook"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Wrong YAML / fails schema validation
+        - Outdated vendor behavior or URL
+        - Triage step is misleading or wrong
+        - False positives in the wild
+        - Probing pattern is unsafe
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is wrong
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix (optional)

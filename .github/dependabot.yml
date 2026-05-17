@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Enable only ecosystems used by this repository.
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"

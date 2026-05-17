@@ -1,0 +1,13 @@
+# Documents ownership for review routing. CI status checks are the merge
+# gate; this file does not require approving review by default.
+
+* @cigan1
+
+# High-risk areas where an owner review is still recommended.
+/.github/workflows/ @cigan1
+/.github/scripts/   @cigan1
+/scripts/           @cigan1
+/schemas/           @cigan1
+/SECURITY.md        @cigan1
+/MAINTAINERS.md     @cigan1
+/LICENSE            @cigan1

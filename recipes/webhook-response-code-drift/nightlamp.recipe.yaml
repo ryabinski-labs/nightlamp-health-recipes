@@ -1,0 +1,85 @@
+id: webhook-response-code-drift
+scenario: An inbound webhook starts returning 2xx but no longer does the work.
+audience: [bubble, no-code, ai-built, generic]
+
+symptoms:
+  - Sender (Stripe, GitHub, Slack, custom) records successful delivery.
+  - The downstream side-effect (DB row, email, notification) does not happen.
+  - Logs show the webhook handler ran but exited early with no error.
+
+failure_modes:
+  - A try/except now swallows an exception and returns 200.
+  - A required field was renamed by the sender; handler ignores the new event shape.
+  - The handler now returns 200 immediately and enqueues the work, but the worker is stuck.
+  - A feature flag disables the side-effect but the handler still 200s.
+  - A schema migration left a NOT NULL column the handler doesn't populate; insert fails silently.
+
+checks:
+  - type: api_canary
+    name: Webhook handler accepts canary event and side-effect is observable
+    cadence_seconds: 900
+    steps:
+      - method: POST
+        target: "https://{{your-app-domain}}/{{webhook_path}}"
+        headers:
+          content-type: application/json
+          x-nightlamp-canary: "1"
+        body: '{"event":"nightlamp.canary","id":"{{run_id}}"}'
+        assert_status: 200
+      - method: GET
+        target: "https://{{your-app-domain}}/{{canary_lookup_path}}?id={{run_id}}"
+        headers:
+          authorization: "Bearer {{INTERNAL_READ_TOKEN}}"
+        assert_status: 200
+        assert_keyword: "{{run_id}}"
+    notes: |
+      Two-step canary: post a canary event with a unique id, then immediately
+      query the side-effect surface for that id. A 200 on POST alone is not
+      enough — the GET proves the work happened.
+
+  - type: http_keyword
+    name: Webhook handler advertises its current contract version
+    target: "https://{{your-app-domain}}/{{webhook_path}}/meta"
+    method: GET
+    assert_status: 200
+    assert_keyword: "{{expected_contract_version}}"
+    cadence_seconds: 1800
+    notes: |
+      Optional: only useful if the handler exposes a meta/version endpoint.
+      Catches deploys that silently changed the contract.
+
+expected_signals:
+  pass:
+    - Canary POST 200 and GET returns the run_id
+    - Meta endpoint reports the expected contract version
+  fail:
+    - POST returns non-2xx, OR
+    - POST 200 but GET cannot find the run_id (work didn't happen)
+    - Meta endpoint reports an unexpected contract version
+
+false_positives:
+  - If the worker is delayed by minutes, the GET may be too quick.
+    Add a small delay between steps or extend the cadence and assertion window.
+  - Some webhook handlers route to a queue; if the queue is paused intentionally, suppress the alert.
+
+triage:
+  - Search logs for the canary run_id.
+  - "If POST 200 but GET fails: confirm the side-effect path (DB write, email send) actually executes. Most often a silent except/pass block or a feature flag."
+  - Read the handler diff since the last known-good deploy.
+  - Replay a recent failed canary in the queue/worker and observe.
+  - Confirm the handler's interpretation of the event shape matches what the sender currently sends.
+
+alert_routing:
+  severity: page
+  channel: oncall-integrations
+  suppress_when:
+    - scheduled-maintenance
+    - queue-paused-intentionally
+
+references:
+  - https://docs.github.com/en/webhooks/about-webhooks
+  - https://docs.stripe.com/webhooks
+  - https://api.slack.com/messaging/webhooks
+
+last_reviewed: "2026-05-17"
+owner: maintainers
