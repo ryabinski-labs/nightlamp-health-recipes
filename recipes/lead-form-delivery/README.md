@@ -53,3 +53,9 @@ outreach.
 - **Severity:** ticket (not page — marketing-ops can handle next-morning).
 - **Channel:** marketing-ops.
 - **Suppress:** scheduled maintenance windows.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=lead-form-delivery) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.
+
+Companion guide: [Your form says “Thanks!” but the lead never arrives](https://nightlamp.app/guides/form-submits-but-no-lead).

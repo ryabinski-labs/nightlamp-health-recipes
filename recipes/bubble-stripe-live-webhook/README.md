@@ -66,3 +66,9 @@ store, never in the manifest.
 
 - [Bubble Stripe webhook guide on Nightlamp](https://nightlamp.app/guides/bubble-stripe-webhook-failures)
 - [Stripe webhooks docs](https://docs.stripe.com/webhooks)
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=bubble-stripe-live-webhook) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.
+
+Companion guide: [Bubble Stripe webhook broke in live mode? 7 checks](https://nightlamp.app/guides/bubble-stripe-webhook-failures).

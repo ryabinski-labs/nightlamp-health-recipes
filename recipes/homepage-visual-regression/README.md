@@ -51,3 +51,7 @@ Three monitors, layered.
 - **Severity:** ticket.
 - **Channel:** marketing-ops.
 - **Suppress:** scheduled deploy windows, active re-baselining.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=homepage-visual-regression) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.
