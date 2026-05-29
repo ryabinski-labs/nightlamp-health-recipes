@@ -49,3 +49,7 @@ openssl s_client -servername {{host}} -connect {{host}}:443 </dev/null 2>/dev/nu
 - **Severity:** ticket (21 days is plenty of warning).
 - **Channel:** on-call platform.
 - **Suppress:** scheduled cert renewal window.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=ssl-expiry) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.

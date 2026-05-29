@@ -52,3 +52,7 @@ Substitute `{{your-app-domain}}`, `{{checkout_path}}`,
 - **Severity:** page.
 - **Channel:** on-call revenue.
 - **Suppress:** scheduled maintenance, payment provider status page incident.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=checkout-path) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.

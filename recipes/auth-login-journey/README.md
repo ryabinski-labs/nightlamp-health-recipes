@@ -50,3 +50,7 @@ a real customer credential.
 - **Severity:** page.
 - **Channel:** on-call auth.
 - **Suppress:** scheduled maintenance, identity provider status incidents.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=auth-login-journey) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.

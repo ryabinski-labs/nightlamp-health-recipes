@@ -56,3 +56,7 @@ Store the vendor token in your monitoring tool's variable store as
 - **Severity:** ticket (vendor outages aren't usually your fix).
 - **Channel:** on-call integrations.
 - **Suppress:** vendor status page incidents, scheduled maintenance.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=third-party-api-canary) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.

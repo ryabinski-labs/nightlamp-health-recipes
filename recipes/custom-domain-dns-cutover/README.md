@@ -50,3 +50,7 @@ clients.
 - **Severity:** page.
 - **Channel:** on-call platform.
 - **Suppress:** the explicit cutover window.
+
+## Run this continuously
+
+[Nightlamp](https://nightlamp.app/?utm_source=recipes&utm_medium=readme&utm_campaign=custom-domain-dns-cutover) packages these monitors, incident matching, and diagnostic playbooks for no-code and AI-built apps — so this recipe runs continuously and pages you in plain English when the contract changes.
