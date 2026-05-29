@@ -1,5 +1,12 @@
 # Nightlamp Health-Check Recipes
 
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-1f6feb.svg)](LICENSE)
+[![Recipes](https://img.shields.io/badge/recipes-10-17202a.svg)](#available-recipes)
+[![Validate recipes](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml/badge.svg)](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml)
+[![Run on Nightlamp](https://img.shields.io/badge/run%20on-Nightlamp-1f6feb.svg)](https://nightlamp.app/recipes?utm_source=recipes&utm_medium=readme&utm_campaign=badge)
+
+**[Browse the recipes &rarr;](https://nightlamp.app/recipes?utm_source=recipes&utm_medium=readme&utm_campaign=top_cta)** — scenario-specific monitors and triage for the silent failures in no-code &amp; AI-built apps.
+
 Open-source recipes for the failure modes that bite no-code and AI-built apps:
 checkout, webhook, auth, DNS/SSL, cron, lead forms, third-party APIs, and visual
 regressions. Copy a recipe, set up the checks, and know what to look at first

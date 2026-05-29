@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,650;1,8..60,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f8fb; --paper-soft:#eef3f8; --paper-deep:#dde7f1;
+    --ink:#17202a; --ink-soft:#435263; --ink-muted:#617080;
+    --rule:#d8e0e8; --rule-soft:#e8edf3;
+    --lamp:#1f6feb; --lamp-deep:#1557bf; --lamp-soft:#9cc5ff;
+    --nav:#101820;
+    --open:#c2414b; --ack:#8a570f; --resolved:#21875a;
+    --display:"Source Serif 4",Georgia,serif;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1280px;height:640px}
+  .card{
+    position:relative;width:1280px;height:640px;overflow:hidden;
+    background:var(--paper);color:var(--ink);
+    font-family:var(--sans);
+    padding:64px 72px;display:flex;flex-direction:column;
+    isolation:isolate;
+  }
+  /* engineering-paper grid + lamp glow + paper grain */
+  .bg{position:absolute;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(760px 420px at 92% -12%, rgba(31,111,235,.16), transparent 70%),
+      radial-gradient(620px 360px at -8% 118%, rgba(31,111,235,.07), transparent 65%),
+      repeating-linear-gradient(90deg, transparent 0 95px, rgba(23,32,42,.045) 95px 96px),
+      repeating-linear-gradient(0deg, transparent 0 95px, rgba(23,32,42,.035) 95px 96px),
+      linear-gradient(180deg,var(--paper),var(--paper-soft));
+  }
+  .top{display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:13px}
+  .dot{position:relative;width:18px;height:18px;border-radius:50%;
+    background:var(--lamp);
+    box-shadow:0 0 0 5px rgba(31,111,235,.18), 0 0 22px 3px rgba(31,111,235,.55);}
+  .brand b{font-family:var(--display);font-weight:650;font-size:28px;letter-spacing:-.01em}
+  .eyebrow{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink-muted)}
+
+  .mid{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8px 0}
+  .kicker{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--lamp-deep);margin-bottom:18px}
+  h1{font-family:var(--display);font-weight:650;font-size:73px;line-height:1.0;
+    letter-spacing:-.022em;color:var(--ink);max-width:1060px}
+  h1 .em{position:relative;font-style:italic;font-weight:500;color:var(--lamp-deep);white-space:nowrap}
+  h1 .em::after{content:"";position:absolute;left:0;right:0;bottom:-.12em;height:.10em;border-radius:3px;
+    background:linear-gradient(90deg,var(--lamp),rgba(31,111,235,.35));}
+  h1 .nb{white-space:nowrap}
+  .sub{margin-top:26px;font-size:23px;line-height:1.45;color:var(--ink-soft);max-width:880px}
+  .sub strong{color:var(--ink);font-weight:600}
+
+  .chips{margin-top:30px;display:flex;flex-wrap:wrap;gap:10px}
+  .chip{display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink-soft);
+    background:#fff;border:1px solid var(--rule);border-radius:999px;padding:8px 15px;}
+  .chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+  .foot{display:flex;align-items:center;justify-content:space-between;
+    padding-top:22px;border-top:1px solid var(--rule)}
+  .repo{font-family:var(--mono);font-size:18px;color:var(--ink);font-weight:500}
+  .repo span{color:var(--ink-muted)}
+  .pills{display:flex;gap:10px}
+  .pill{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;padding:7px 14px;border-radius:7px}
+  .pill--count{background:var(--ink);color:var(--paper)}
+  .pill--lic{background:var(--paper-deep);color:var(--ink-soft)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="bg"></div>
+
+    <div class="top">
+      <div class="brand"><span class="dot"></span><b>Nightlamp</b></div>
+      <div class="eyebrow">Open Source · Apache-2.0</div>
+    </div>
+
+    <div class="mid">
+      <div class="kicker">Health-check recipes</div>
+      <h1>For the failures that <span class="em">silently break</span> <span class="nb">no-code apps.</span></h1>
+      <p class="sub">
+        Scenario-specific monitors and triage for <strong>Bubble, Lovable &amp; Webflow</strong> apps.
+        Copy a recipe — know what to look at first when revenue quietly stops.
+      </p>
+      <div class="chips">
+        <span class="chip"><i style="background:var(--open)"></i>checkout</span>
+        <span class="chip"><i style="background:var(--ack)"></i>webhooks</span>
+        <span class="chip"><i style="background:var(--lamp)"></i>auth</span>
+        <span class="chip"><i style="background:var(--open)"></i>lead&nbsp;forms</span>
+        <span class="chip"><i style="background:var(--ack)"></i>DNS&nbsp;/&nbsp;SSL</span>
+        <span class="chip"><i style="background:var(--resolved)"></i>cron</span>
+        <span class="chip"><i style="background:var(--lamp)"></i>third-party&nbsp;APIs</span>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="repo">github.com/GipsyChef/<span>nightlamp-health-recipes</span></div>
+      <div class="pills">
+        <span class="pill pill--lic">Apache-2.0</span>
+        <span class="pill pill--count">10 recipes</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
