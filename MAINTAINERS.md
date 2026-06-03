@@ -9,7 +9,7 @@ even if checks pass.
 
 | Name | GitHub | Email | Areas |
 |---|---|---|---|
-| Yoni Rybinski | [@cigan1](https://github.com/cigan1) | cigan1@gmail.com | All areas (lead maintainer) |
+| Yoni Ryabinski | [@cigan1](https://github.com/cigan1) | cigan1@gmail.com | All areas (lead maintainer) |
 
 ## Becoming a maintainer
 
