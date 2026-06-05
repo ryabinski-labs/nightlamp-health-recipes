@@ -18,12 +18,19 @@ checks:
   - type: heartbeat
     name: Job pings Nightlamp at the end of each run
     expected_interval_seconds: 3600
+    grace_seconds: 600
     cadence_seconds: 60
     notes: |
+      Push-based dead-man's switch (https://nightlamp.app/docs/heartbeat-monitors).
       Set expected_interval_seconds to your job's actual cadence (3600 = hourly,
-      86400 = daily). Configure the job to POST to the heartbeat URL on
-      successful completion only. If no ping arrives within
-      expected_interval_seconds plus a small grace, the monitor opens an incident.
+      86400 = daily). On monitor creation Nightlamp returns a unique, unguessable
+      `heartbeat_ping_url` — treat it as a credential. Have the job ping it on
+      SUCCESS only, after the real work, e.g. in cron:
+        */60 * * * * /job.sh && curl -fsS -X POST "$HEARTBEAT_PING_URL"
+      An incident opens when now - last_ping_at > expected_interval_seconds +
+      grace_seconds (grace defaults to half the interval if unset). Before the
+      first ping the clock runs from creation, so a job that never starts is
+      caught too. Pause the monitor (paused_until) during planned maintenance.
 
   - type: http_keyword
     name: Job output artifact exists and is recent
@@ -62,8 +69,9 @@ alert_routing:
     - scheduled-maintenance
 
 references:
+  - https://nightlamp.app/docs/heartbeat-monitors
   - https://en.wikipedia.org/wiki/Dead_man%27s_switch
   - https://healthchecks.io/docs/
 
-last_reviewed: "2026-05-17"
+last_reviewed: "2026-06-05"
 owner: maintainers
