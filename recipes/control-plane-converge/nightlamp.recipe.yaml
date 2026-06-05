@@ -1,0 +1,84 @@
+id: control-plane-converge
+scenario: A self-converging control plane stops reconciling, silently no-ops, or rolls back and drift goes unnoticed.
+audience: [generic, ai-built]
+
+symptoms:
+  - Config drift on a reconciled host goes unreconciled until the next deploy fails.
+  - The convergence timer dies and nobody notices until a change is needed.
+  - Converge runs and exits 0 but never applies the desired state.
+
+failure_modes:
+  - The convergence timer (e.g. a systemd timer) stopped or was masked.
+  - ansible-pull (or the reconcile step) throws on git/SSM/network but the error is swallowed.
+  - A bad commit fails config validation; converge rolls back but keeps failing.
+  - The node's secret-reader credential expired, so secrets can't be fetched.
+  - The timer fires but convergence is a silent no-op and drift accumulates.
+
+checks:
+  - type: heartbeat
+    name: Converge job pings Nightlamp after a health-gated success
+    expected_interval_seconds: 600
+    grace_seconds: 300
+    cadence_seconds: 60
+    notes: |
+      Push-based dead-man's switch (https://nightlamp.app/docs/heartbeat-monitors).
+      converge.sh POSTs the heartbeat_ping_url ONLY after a post-converge health
+      gate passes (every vhost's /healthz returns 200). A failed or rolled-back
+      converge withholds the ping, so an incident opens at ~1.5x the interval.
+      Ping on SUCCESS only, after the real work, e.g. every 10 minutes:
+        */10 * * * * /usr/local/bin/converge.sh && curl -fsS -X POST "$HEARTBEAT_PING_URL"
+      The clock runs from monitor creation, so a timer that never starts is
+      caught too. Pause the monitor (paused_until) during planned maintenance.
+
+  - type: http_keyword
+    name: Converge status artifact is present and reflects a recent success
+    target: "{{converge_status_url}}"
+    method: GET
+    assert_status: 200
+    assert_keyword: '"ok":true'
+    cadence_seconds: 300
+    notes: |
+      Catches "timer ran, exited 0, did nothing." Have the node serve a small
+      JSON artifact, e.g.
+        {"ok":true,"last_success":"<ISO8601>","config_rev":"<git-sha>"}
+      where `ok` is true only when last_success is within the last ~20 minutes.
+      A no-op or rollback lets it go stale and `ok` flips to false.
+
+  - type: http_status
+    name: API healthz is up, independent of the converge loop
+    target: "{{healthz_url}}"
+    method: GET
+    assert_status: 200
+    cadence_seconds: 60
+
+expected_signals:
+  pass:
+    - Heartbeat received within expected_interval + grace (~900s)
+    - converge-status returns 200 with "ok":true
+  fail:
+    - No heartbeat in 1.5x the expected interval
+    - converge-status missing "ok":true (stale or rolled back)
+
+false_positives:
+  - A long but legitimate converge can lag the heartbeat if the grace window is too tight.
+  - A deliberate maintenance stop fires unless the monitor is paused.
+
+triage:
+  - Check the convergence timer is active and not masked.
+  - Read the last converge run's logs for a swallowed git/SSM/network error.
+  - Fetch the converge-status artifact; compare last_success and config_rev.
+  - If a bad commit triggered a rollback, revert it and let converge re-apply.
+  - Confirm the node's secret-reader credential is still valid.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://nightlamp.app/guides/control-plane-self-convergence
+  - https://nightlamp.app/docs/heartbeat-monitors
+
+last_reviewed: "2026-06-05"
+owner: nightlamp-maintainers

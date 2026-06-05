@@ -78,6 +78,7 @@ lock-in.**
 | 🌐 Custom domain / DNS cutover | A DNS edit moved customers to a misconfigured origin. | [`custom-domain-dns-cutover`](recipes/custom-domain-dns-cutover/) |
 | 🔒 SSL certificate expiry | The cert quietly expires on a subdomain you forgot existed. | [`ssl-expiry`](recipes/ssl-expiry/) |
 | ⏰ Cron / heartbeat | A scheduled job stops running and no one notices for a week. | [`cron-heartbeat`](recipes/cron-heartbeat/) |
+| 🔄 Control-plane self-convergence | The reconcile loop dies, silently no-ops, or rolls back and drift goes unreconciled. | [`control-plane-converge`](recipes/control-plane-converge/) |
 | 🔌 Third-party API canary | A vendor (Stripe, Twilio, OpenAI, Mapbox) degrades or rate-limits you. | [`third-party-api-canary`](recipes/third-party-api-canary/) |
 | 🖼️ Homepage visual regression | A theme/CSS deploy makes the landing page render blank or broken. | [`homepage-visual-regression`](recipes/homepage-visual-regression/) |
 | 🔁 Webhook response-code drift | An inbound webhook starts returning 2xx but no longer does the work. | [`webhook-response-code-drift`](recipes/webhook-response-code-drift/) |
