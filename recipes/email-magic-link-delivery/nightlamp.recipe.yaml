@@ -1,0 +1,92 @@
+id: email-magic-link-delivery
+scenario: Signup/login magic-link or OTP emails stop arriving, so customers can never get into the app.
+audience: [bubble, lovable, cursor, no-code, ai-built, generic]
+
+symptoms:
+  - Users report "I never got the login email" or "the code never arrived".
+  - Signups complete but the confirmation email never lands, so accounts stay unverified.
+  - Support volume spikes around "can't log in" while the login form itself looks fine.
+
+failure_modes:
+  - The transactional email provider (Postmark, SendGrid, Resend, SES) suspended the account or hit a sending cap.
+  - A domain/DNS change broke SPF, DKIM, or DMARC, so mail is silently dropped or junked.
+  - A deploy changed the auth endpoint, the from-address, or the email template variable that carries the link.
+  - The provider API key rotated and the app still uses the old one, so sends fail open with a 200.
+  - The magic-link host moved (custom domain cutover) and links now point at a dead origin.
+
+checks:
+  - type: api_canary
+    name: Request magic link and confirm mailbox delivery
+    cadence_seconds: 300
+    steps:
+      - method: POST
+        target: "https://{{your-app-domain}}/{{auth_magic_link_endpoint}}"
+        headers:
+          content-type: application/json
+        body: '{"email":"canary@{{agentdraft_mailbox_domain}}"}'
+        assert_status: 200
+      - method: GET
+        target: "{{agentdraft_mailbox_query_url}}"
+        headers:
+          authorization: "Bearer {{AGENTDRAFT_API_TOKEN}}"
+        assert_status: 200
+        assert_keyword: "{{magic_link_host}}"
+        notes: |
+          Polls the AgentDraft QA mailbox (scopes mailbox:read + mailbox:write)
+          for the newest message addressed to the canary address. Assert on a
+          derived fact — the magic-link host appearing in the body, i.e.
+          `link_present` — not on the raw link itself. Nightlamp does not store
+          the raw magic link, OTP, or session cookie. Email-flow monitors have a
+          minimum cadence of 300s because real delivery takes seconds to minutes.
+
+  - type: api_canary
+    name: Email passed SPF/DKIM/DMARC authentication
+    cadence_seconds: 300
+    steps:
+      - method: GET
+        target: "{{agentdraft_mailbox_query_url}}"
+        headers:
+          authorization: "Bearer {{AGENTDRAFT_API_TOKEN}}"
+        assert_status: 200
+        assert_keyword: "{{auth_pass_marker}}"
+        notes: |
+          `{{auth_pass_marker}}` is the AgentDraft-derived authentication result
+          for the delivered message (e.g. "dkim=pass" / "spf=pass"). A failure
+          here means mail is being delivered but is likely landing in spam.
+
+expected_signals:
+  pass:
+    - The POST trigger returns 200/202 (the app accepted the magic-link request)
+    - The mailbox poll finds a fresh message whose body contains the magic-link host
+    - SPF/DKIM/DMARC authentication is reported as pass
+  fail:
+    - The trigger 4xx/5xx, or returns 200 but no message ever arrives within the cadence window
+    - The delivered message is missing the magic-link host / OTP marker
+    - Authentication results show spf=fail or dkim=fail
+
+false_positives:
+  - Real email delivery is bursty; a single slow send can lag the 300s window. Add one grace cycle before paging.
+  - Provider sandbox/test mode can deliver to a suppression list — confirm the canary address is allowlisted.
+  - A marketing send to the same domain can warm-throttle transactional mail; correlate with provider status.
+
+triage:
+  - Open the AgentDraft QA mailbox and look for the canary message; note its receive timestamp vs the trigger time.
+  - If no message arrived, check the email provider dashboard for bounces, suspensions, or a hit sending cap.
+  - If the message arrived but auth failed, re-check SPF/DKIM/DMARC DNS records for the sending domain.
+  - Confirm the provider API key in the app is the current one (rotation is the most common silent cause).
+  - Diff the auth/email template against the last known good deploy — a renamed link variable breaks the link silently.
+
+alert_routing:
+  severity: page
+  channel: oncall-auth
+  suppress_when:
+    - scheduled-maintenance
+    - email-provider-status-incident
+
+references:
+  - https://nightlamp.app/docs/agentdraft-email-flow
+  - https://agentdraft.io
+  - https://www.rfc-editor.org/rfc/rfc7208
+
+last_reviewed: "2026-06-05"
+owner: maintainers

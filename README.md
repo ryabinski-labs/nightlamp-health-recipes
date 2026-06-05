@@ -6,7 +6,7 @@
 
 [![Validate Recipes](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml/badge.svg)](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Recipes](https://img.shields.io/badge/recipes-10-success.svg)](#available-recipes)
+[![Recipes](https://img.shields.io/badge/recipes-13-success.svg)](#available-recipes)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Tool-agnostic](https://img.shields.io/badge/works%20with-any%20synthetic%20monitor-orange.svg)](#use-a-recipe-with-any-other-tool)
 
@@ -29,7 +29,7 @@ lock-in.**
 
 | | |
 |---|---|
-| **What it is** | A library of 10 scenario-specific monitoring recipes (runbook + YAML manifest each). |
+| **What it is** | A library of 13 scenario-specific monitoring recipes (runbook + YAML manifest each). |
 | **Who it's for** | No-code founders and small teams running production apps without a dedicated SRE. |
 | **What you get** | Concrete monitors to set up, expected signals, false positives, a triage checklist, and alert routing — per failure mode. |
 | **Cost to start** | Copy a folder, swap in your domain, create the listed monitors. ~5 minutes per recipe. |
@@ -81,6 +81,9 @@ lock-in.**
 | 🔌 Third-party API canary | A vendor (Stripe, Twilio, OpenAI, Mapbox) degrades or rate-limits you. | [`third-party-api-canary`](recipes/third-party-api-canary/) |
 | 🖼️ Homepage visual regression | A theme/CSS deploy makes the landing page render blank or broken. | [`homepage-visual-regression`](recipes/homepage-visual-regression/) |
 | 🔁 Webhook response-code drift | An inbound webhook starts returning 2xx but no longer does the work. | [`webhook-response-code-drift`](recipes/webhook-response-code-drift/) |
+| ✉️ Email magic-link delivery | The login email or OTP stops arriving, so customers can't get in. | [`email-magic-link-delivery`](recipes/email-magic-link-delivery/) |
+| 🚨 Error-pipeline ingestion | A deploy drops the SDK or rotates the DSN, so exceptions raise no alerts. | [`error-pipeline-ingestion`](recipes/error-pipeline-ingestion/) |
+| 📡 Log-pipeline silence | The log shipper or CloudWatch subscription dies and you go blind. | [`log-pipeline-silence`](recipes/log-pipeline-silence/) |
 
 Recipes are organized by **scenario** (the thing that actually breaks), not by
 check primitive — so you start from the symptom your customer reports.
