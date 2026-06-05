@@ -18,11 +18,16 @@ checks:
   - type: heartbeat
     name: Log stream is still flowing
     expected_interval_seconds: 600
+    grace_seconds: 300
     notes: |
-      Treat steady log volume as a heartbeat. A healthy app under traffic emits
-      log lines continuously; if no line is fingerprinted into the Issue queue
-      within the expected interval, the pipeline — not the app — is the suspect.
-      Set the interval to comfortably exceed your quietest normal traffic trough.
+      A heartbeat monitor (https://nightlamp.app/docs/heartbeat-monitors) applied
+      to ingestion rather than a job ping: treat steady log volume as the signal.
+      A healthy app under traffic emits log lines continuously; if no line is
+      fingerprinted into the Issue queue within expected_interval_seconds +
+      grace_seconds, the pipeline — not the app — is the suspect. Set the interval
+      to comfortably exceed your quietest normal traffic trough. (If your stack has
+      a single high-signal worker, an explicit ping from that host on its loop is a
+      more direct heartbeat than aggregate volume — pause it during maintenance.)
 
   - type: api_canary
     name: Loki push endpoint accepts a canary line
@@ -70,6 +75,7 @@ alert_routing:
 
 references:
   - https://nightlamp.app/docs/log-subscriptions
+  - https://nightlamp.app/docs/heartbeat-monitors
   - https://nightlamp.app/docs/fluent-bit
   - https://grafana.com/docs/loki/latest/reference/loki-http-api/
 

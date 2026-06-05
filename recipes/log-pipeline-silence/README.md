@@ -22,10 +22,12 @@
 This recipe self-monitors [log
 subscriptions](https://nightlamp.app/docs/log-subscriptions) from both ends:
 
-1. **Log stream is still flowing** (`heartbeat`) — treats steady log volume as
-   a heartbeat. A healthy app under traffic emits lines continuously; if none
-   are fingerprinted into the Issue queue within `expected_interval_seconds`,
-   the *pipeline* is the suspect, not the app.
+1. **Log stream is still flowing** (`heartbeat`) — a
+   [heartbeat monitor](https://nightlamp.app/docs/heartbeat-monitors) applied to
+   ingestion instead of a job ping: it treats steady log volume as the signal. A
+   healthy app under traffic emits lines continuously; if none are fingerprinted
+   into the Issue queue within `expected_interval_seconds + grace_seconds`, the
+   *pipeline* is the suspect, not the app.
 2. **Loki push endpoint accepts a canary line** (`api_canary`) — POSTs one
    canary line via the standard Loki push API and asserts `204`, proving the
    endpoint and auth header are valid. Together the two checks separate "shipper
