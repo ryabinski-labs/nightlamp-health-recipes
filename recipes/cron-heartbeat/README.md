@@ -22,16 +22,27 @@
 
 Two monitors that fail differently. Use both.
 
-1. **`heartbeat`** — the job POSTs to a heartbeat URL on **successful**
-   completion only. If no ping arrives within `expected_interval_seconds`
-   plus a small grace window, the monitor opens an incident. This is the
-   classic dead-man's-switch pattern.
+1. **`heartbeat`** — a push-based dead-man's switch
+   ([docs](https://nightlamp.app/docs/heartbeat-monitors)). Nightlamp hands you
+   a unique, unguessable `heartbeat_ping_url` (treat it as a credential); the
+   job pings it on **successful** completion only, *after* the real work:
+
+   ```cron
+   */60 * * * * /job.sh && curl -fsS -X POST "$HEARTBEAT_PING_URL"
+   ```
+
+   An incident opens when `now - last_ping_at > expected_interval_seconds +
+   grace_seconds` (grace defaults to half the interval). Because the clock runs
+   from monitor creation, a job that **never starts** is caught too — not just
+   one that stops. Pause the monitor (`paused_until`) during planned maintenance.
 2. **`http_keyword` on the output artifact** — fetches the job's output
    (report URL, log file, generated dashboard) and asserts a recent
    timestamp marker is present. Catches the "exits 0 but did nothing" case
    the heartbeat misses.
 
-Both together close the most common failure modes.
+Both together close the most common failure modes: putting the ping *after* the
+work means a failed run sends no signal, and the artifact check catches a run
+that pinged but produced nothing.
 
 ## Triage
 
