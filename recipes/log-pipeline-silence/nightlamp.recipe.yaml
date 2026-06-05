@@ -1,0 +1,77 @@
+id: log-pipeline-silence
+scenario: The log shipper or CloudWatch subscription dies, so logs stop reaching Nightlamp and you go blind without noticing.
+audience: [cursor, ai-built, generic]
+
+symptoms:
+  - The log/Issue view stops updating even though the app is clearly serving traffic.
+  - An incident happens but there are no logs to investigate after the fact.
+  - The last log line ingested is timestamped hours ago, with no error to explain the gap.
+
+failure_modes:
+  - The log shipper (Fluent Bit, Promtail, Vector, Grafana Alloy) crashed, OOMed, or was evicted and never rescheduled.
+  - The shipper auth header / DSN rotated and pushes now 401 silently in a retry loop.
+  - A CloudWatch subscription filter was deleted, or its destination Lambda lost its invoke permission.
+  - A Loki push endpoint or label change made the shipper drop batches it considers malformed.
+  - A node pool or namespace change left the DaemonSet without the pods whose logs you cared about.
+
+checks:
+  - type: heartbeat
+    name: Log stream is still flowing
+    expected_interval_seconds: 600
+    notes: |
+      Treat steady log volume as a heartbeat. A healthy app under traffic emits
+      log lines continuously; if no line is fingerprinted into the Issue queue
+      within the expected interval, the pipeline — not the app — is the suspect.
+      Set the interval to comfortably exceed your quietest normal traffic trough.
+
+  - type: api_canary
+    name: Loki push endpoint accepts a canary line
+    cadence_seconds: 600
+    steps:
+      - method: POST
+        target: "https://{{nightlamp_ingest_host}}/api/loki/api/v1/push"
+        headers:
+          content-type: application/json
+          authorization: "Bearer {{LOKI_PUSH_TOKEN}}"
+        body: '{"streams":[{"stream":{"app":"{{app_id}}","source":"nightlamp-canary"},"values":[["{{push_timestamp_ns}}","nightlamp log pipeline canary"]]}]}'
+        assert_status: 204
+        notes: |
+          Posts one canary line via the standard Loki push API documented at
+          https://nightlamp.app/docs/log-subscriptions. A 204 proves the
+          endpoint + auth header are valid, isolating an auth/endpoint break from
+          a dead shipper. Label the stream `source=nightlamp-canary` so it is easy
+          to filter out of real queries.
+
+expected_signals:
+  pass:
+    - The heartbeat keeps resetting — log lines arrive within the expected interval
+    - The canary push returns 204 (endpoint + auth are healthy)
+  fail:
+    - No log line arrives within the expected interval (shipper down or detached)
+    - The canary push 401/4xx (auth/DSN rotated) or 5xx (endpoint problem)
+
+false_positives:
+  - Genuinely low-traffic apps can fall quiet at night — size the interval to the quietest real trough, or scope to a busier log stream.
+  - A deliberate log-level reduction (debug → error only) can cut volume below the heartbeat threshold; re-baseline after such changes.
+
+triage:
+  - If the push canary is 204 but the heartbeat is silent, the endpoint is fine — the shipper is the problem. Check the shipper pod/agent status and restart count.
+  - If the push canary fails auth, rotate/redeploy the shipper credential to match Nightlamp's integration settings.
+  - On the CloudWatch path, confirm the subscription filter still exists and the destination Lambda has invoke permission.
+  - Check recent infra changes — node pool drains, namespace moves, or DaemonSet selector edits that orphaned the target pods.
+  - Tail the shipper's own logs for backpressure, dropped batches, or malformed-label rejections.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-maintenance
+    - planned-cluster-upgrade
+
+references:
+  - https://nightlamp.app/docs/log-subscriptions
+  - https://nightlamp.app/docs/fluent-bit
+  - https://grafana.com/docs/loki/latest/reference/loki-http-api/
+
+last_reviewed: "2026-06-05"
+owner: maintainers

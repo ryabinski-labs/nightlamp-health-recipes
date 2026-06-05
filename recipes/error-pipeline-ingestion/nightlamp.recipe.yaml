@@ -1,0 +1,80 @@
+id: error-pipeline-ingestion
+scenario: A deploy silently breaks error reporting, so real exceptions raise no alerts and you find out from customers.
+audience: [lovable, cursor, ai-built, generic]
+
+symptoms:
+  - Customers report errors that your dashboards never showed.
+  - The Issue queue goes suspiciously quiet right after a deploy, even under normal traffic.
+  - You think you have monitoring, but the last ingested event is hours or days old.
+
+failure_modes:
+  - A deploy removed or reordered the SDK init, so exceptions are never captured.
+  - The DSN rotated and the app still ships events to the old write-only credential.
+  - A bundler/tree-shaking change dropped the `@sentry/*` client from the production build.
+  - An outbound egress/firewall or CSP `connect-src` change blocks the store endpoint.
+  - Sampling was cranked to near-zero in config, dropping events before they leave the client.
+
+checks:
+  - type: api_canary
+    name: Canary event is accepted by the ingestion endpoint
+    cadence_seconds: 900
+    steps:
+      - method: POST
+        target: "https://{{dsn_key}}@{{nightlamp_ingest_host}}/api/{{app_id}}/store/"
+        headers:
+          content-type: application/json
+        body: '{"message":"nightlamp ingestion canary","level":"info","environment":"monitoring","release":"{{release}}"}'
+        assert_status: 200
+        notes: |
+          Posts a canary event straight to the Sentry-compatible store endpoint
+          described in https://nightlamp.app/docs/sdk-integration. The DSN is a
+          write-events-only credential, so a 200 proves the write path (credential
+          + network + endpoint) is alive end to end. Tag the canary with
+          `level=info` and `environment=monitoring` so production alert rules
+          (which filter on min level + environment) ignore it.
+
+  - type: api_canary
+    name: App build still references the ingestion DSN
+    cadence_seconds: 3600
+    steps:
+      - method: GET
+        target: "https://{{your-app-domain}}/{{built_bundle_path}}"
+        assert_status: 200
+        assert_keyword: "{{nightlamp_ingest_host}}"
+        notes: |
+          For client-side SDKs, the production bundle should contain the ingest
+          host. If a tree-shake or a dropped init removes it, this fires before a
+          real exception ever goes unreported. Skip this check for server-only SDKs.
+
+expected_signals:
+  pass:
+    - The canary POST returns 200 (events can reach the ingestion endpoint)
+    - The built bundle still contains the ingest host
+  fail:
+    - The canary POST 4xx/5xx or times out (credential rotated, endpoint blocked, network egress broken)
+    - The built bundle no longer references the ingest host (SDK dropped from the build)
+
+false_positives:
+  - The canary event itself appears in the Issue queue — filter it out by `environment=monitoring` so it never pages.
+  - A short ingest-endpoint maintenance window can 5xx briefly; allow one grace cycle.
+
+triage:
+  - Re-run the canary by hand against the store endpoint; a non-200 isolates the break to the write path.
+  - Compare the current DSN in the deployed config to the value in Nightlamp's integration settings — rotation is the usual cause.
+  - Grep the production bundle/source map for the ingest host to confirm the SDK init survived the build.
+  - Check CSP `connect-src` and any egress firewall for the ingest host.
+  - In the Nightlamp Issue queue, confirm alert rules exist (new_issue / threshold / regression) and are scoped to the right environment.
+
+alert_routing:
+  severity: ticket
+  channel: oncall-platform
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://nightlamp.app/docs/sdk-integration
+  - https://nightlamp.app/docs/alert-rules
+  - https://docs.sentry.io/platforms/
+
+last_reviewed: "2026-06-05"
+owner: maintainers
