@@ -1,0 +1,91 @@
+id: bolt-deployed-app-health
+scenario: A bolt.new app works in the editor but breaks once published to Netlify — blank screen, missing data, webhook 401, or exposed keys.
+audience: [bolt, ai-built, no-code]
+
+symptoms:
+  - App is blank or shows a white screen on the live Netlify URL.
+  - Supabase data does not load; tables return empty or 403.
+  - Webhooks return 401 or 403 after deploy.
+  - App broke after forking or duplicating the project.
+  - An API key or secret is visible in client-side network requests.
+
+failure_modes:
+  - Environment variables that exist in the Bolt editor were never added to the Netlify site.
+  - The Bolt-created Supabase database was never claimed in the Supabase dashboard.
+  - The Bolt Netlify connection broke after a fork; a new Netlify site was created without the custom domain.
+  - Webhook JWT verification is enabled and the webhook function rejects the signature.
+  - A secret key is bundled into the client build instead of kept server-side.
+
+checks:
+  - type: http_status
+    name: Live URL responds
+    cadence_seconds: 900
+    target: "https://{{your-netlify-or-custom-domain}}"
+    assert_status: 200
+
+  - type: browser_journey
+    name: Deployed app renders real content
+    cadence_seconds: 1800
+    steps:
+      - navigate: "https://{{your-netlify-or-custom-domain}}"
+        assert_rendered: "{{first_meaningful_content_selector}}"
+
+  - type: api_canary
+    name: Supabase-backed data readable as a user
+    cadence_seconds: 1800
+    steps:
+      - method: GET
+        target: "https://{{your-supabase-project}}.supabase.co/rest/v1/{{table}}?select=id&limit=1"
+        headers:
+          apikey: "{{SUPABASE_ANON_KEY}}"
+          authorization: "Bearer {{TEST_USER_JWT}}"
+        assert_status: 200
+
+  - type: http_keyword
+    name: Webhook endpoint accepts a probe
+    cadence_seconds: 3600
+    target: "https://{{your-netlify-or-custom-domain}}/api/{{webhook_path}}"
+    assert_keyword: "{{expected_ack_keyword}}"
+
+  - type: ssl
+    name: Custom domain certificate valid
+    cadence_seconds: 86400
+    target: "{{your-custom-domain}}"
+
+expected_signals:
+  pass:
+    - Live URL returns 200
+    - Browser journey asserts real content rendered
+    - Supabase read returns at least one row
+    - Webhook probe returns expected acknowledgement
+  fail:
+    - Blank screen or 5xx on the live URL
+    - Browser journey assertion fails (empty or JS error page)
+    - Supabase read returns empty or 403
+    - Webhook probe returns 401 or 403
+
+false_positives:
+  - Netlify cold-starts on hobby plans add a few seconds; browser_journey cadence should be ≥ 1800s.
+  - Row-level security returning empty tables is not a 4xx — assert on expected data, not just status.
+
+triage:
+  - Open the live URL in incognito and check the browser console for MISSING_ENV or auth errors.
+  - Netlify dashboard -> Site settings -> Environment variables: confirm every var the app needs exists.
+  - Supabase: Settings -> Applications — is the Bolt account connected? Is the database claimed?
+  - Netlify deploy log: did the last publish build succeed?
+  - If forked recently, check for a NEW Netlify site and move env vars and custom domain to it.
+  - RLS: verify policies grant real users access; empty lists usually mean missing or wrong policies.
+  - Rotate any key found in client bundles and move the call server-side.
+
+alert_routing:
+  severity: ticket
+  channel: engineering
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://docs.netlify.com/environment-variables/overview/
+  - https://supabase.com/docs/guides/platform/row-level-security
+
+last_reviewed: "2026-06-12"
+owner: maintainers
