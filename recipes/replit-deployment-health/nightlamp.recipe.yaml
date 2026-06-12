@@ -1,0 +1,79 @@
+id: replit-deployment-health
+scenario: A Replit app becomes unreachable or broken after deployment — sleeping on free plan, secrets missing, wrong port, database connection lost, or custom domain DNS drift.
+audience: [replit, ai-built, no-code]
+
+symptoms:
+  - App is unreachable or returns a Replit "This Repl is sleeping" page on free plan.
+  - App works in the Replit editor but fails at the custom domain.
+  - Secrets set in the Replit Secrets tab are undefined at runtime after a restart.
+  - Database queries fail after a Replit restart or cold start.
+  - The app starts on the wrong port and returns a connection refused error.
+
+failure_modes:
+  - Free-plan Replits sleep after inactivity; the first request wakes them but takes 10–30 seconds.
+  - Secrets are present in the Replit Secrets tab but the code reads them from a .env file that is not deployed.
+  - The app binds to localhost (127.0.0.1) instead of 0.0.0.0; external traffic is rejected.
+  - Custom domain CNAME or A record drifted or was overwritten after a Replit deployment.
+  - A connected database (PostgreSQL, Redis) has a connection string that expired or rotated.
+
+checks:
+  - type: http_status
+    name: Deployed URL responds
+    cadence_seconds: 900
+    target: "https://{{your-replit-or-custom-domain}}"
+    assert_status: 200
+
+  - type: browser_journey
+    name: App renders real content
+    cadence_seconds: 1800
+    steps:
+      - navigate: "https://{{your-replit-or-custom-domain}}"
+        assert_rendered: "{{first_meaningful_content_selector}}"
+        timeout_ms: 45000
+
+  - type: api_canary
+    name: Database-backed endpoint returns data
+    cadence_seconds: 1800
+    steps:
+      - method: GET
+        target: "https://{{your-replit-or-custom-domain}}/api/{{health_or_data_endpoint}}"
+        assert_status: 200
+        assert_keyword: "{{expected_keyword}}"
+
+  - type: ssl
+    name: Custom domain certificate valid
+    cadence_seconds: 86400
+    target: "{{your-custom-domain}}"
+
+expected_signals:
+  pass:
+    - Deployed URL returns 200 within the timeout
+    - Browser journey asserts real content rendered
+    - DB-backed endpoint returns the expected keyword
+  fail:
+    - Deployed URL returns sleeping page or connection refused
+    - Browser journey assertion times out or fails
+    - DB-backed endpoint returns 500 or empty
+
+false_positives:
+  - Free-plan wake latency (10–30 s) may cause the first http_status check after a sleep to time out. Use a long timeout and treat a single failure as warning, not alert, unless it persists for two consecutive cadences.
+
+triage:
+  - Open the app URL in a browser and wait 30 seconds; if it wakes, the issue is free-plan sleeping — use Replit Deployments (static, autoscale, or reserved VM) to avoid it.
+  - Check the Replit Secrets tab: every secret the code reads must be present. Secrets are NOT exported as env vars to deployed static builds.
+  - Check the port: the app must bind to 0.0.0.0 on the port Replit exposes (usually 3000 or the PORT env var), not localhost.
+  - Custom domain: verify the CNAME or A record still points to Replit's deployment IP; Replit Deployments publish static assets to a CDN, not the dev container.
+  - Database: test the connection string directly (psql/redis-cli) to confirm it has not rotated.
+
+alert_routing:
+  severity: ticket
+  channel: engineering
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://docs.replit.com/cloud-services/deployments/about-deployments
+  - https://docs.replit.com/programming-ide/workspace-features/secrets
+
+last_reviewed: "2026-06-12"
+owner: maintainers
