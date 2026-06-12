@@ -1,0 +1,88 @@
+id: lovable-published-app-health
+scenario: A Lovable app works in the editor preview but breaks after publishing — blank screen, auth redirect loops, RLS-blocked data, or webhook drift.
+audience: [lovable, ai-built, no-code]
+
+symptoms:
+  - Published app shows a blank screen or loading spinner that never resolves.
+  - Users are redirected in a loop on login or sign-up.
+  - Data that appears in the editor is missing or empty in the live app.
+  - A webhook stops firing or returns 401 after a republish.
+
+failure_modes:
+  - Supabase environment variables are not set for the published project.
+  - Row-level security policies block reads for unauthenticated or real users.
+  - Auth redirect URL not added to Supabase allowed-redirect-URLs after custom domain setup.
+  - Webhook secret or signing key rotated but not updated in the published environment.
+  - A Lovable republish reset a config file that stored production credentials.
+
+checks:
+  - type: http_status
+    name: Published URL responds
+    cadence_seconds: 900
+    target: "https://{{your-lovable-or-custom-domain}}"
+    assert_status: 200
+
+  - type: browser_journey
+    name: App renders real content after publish
+    cadence_seconds: 1800
+    steps:
+      - navigate: "https://{{your-lovable-or-custom-domain}}"
+        assert_rendered: "{{first_meaningful_content_selector}}"
+
+  - type: api_canary
+    name: Supabase data readable as authenticated user
+    cadence_seconds: 1800
+    steps:
+      - method: GET
+        target: "https://{{your-supabase-project}}.supabase.co/rest/v1/{{table}}?select=id&limit=1"
+        headers:
+          apikey: "{{SUPABASE_ANON_KEY}}"
+          authorization: "Bearer {{TEST_USER_JWT}}"
+        assert_status: 200
+
+  - type: http_keyword
+    name: Webhook endpoint acknowledges a probe
+    cadence_seconds: 3600
+    target: "https://{{your-lovable-or-custom-domain}}/api/{{webhook_path}}"
+    assert_keyword: "{{expected_ack_keyword}}"
+
+  - type: ssl
+    name: Custom domain certificate valid
+    cadence_seconds: 86400
+    target: "{{your-custom-domain}}"
+
+expected_signals:
+  pass:
+    - Published URL returns 200
+    - Browser journey asserts real content rendered
+    - Supabase read returns at least one row as an authenticated user
+    - Webhook probe returns expected acknowledgement
+  fail:
+    - Blank screen or 5xx on the published URL
+    - Browser journey assertion fails (spinner, empty, or JS error)
+    - Supabase read returns empty or 403
+    - Webhook probe returns 401 or 403
+
+false_positives:
+  - Supabase RLS returning empty tables is not a 4xx — assert on expected data, not just status.
+  - Auth redirect loops may only appear for users without existing sessions; test from incognito.
+
+triage:
+  - Open the published URL in incognito; watch the network panel for 401/403 on Supabase calls.
+  - Supabase: Settings -> Authentication -> URL Configuration — is your custom domain in Redirect URLs?
+  - Check RLS policies: do they grant access to real users (not just the service role)?
+  - Compare env vars in the Lovable project settings vs what the published build expects.
+  - Rotate any webhook secret that may have been reset by a republish.
+
+alert_routing:
+  severity: ticket
+  channel: engineering
+  suppress_when:
+    - scheduled-maintenance
+
+references:
+  - https://docs.lovable.dev/tips-tricks/custom-domain
+  - https://supabase.com/docs/guides/auth/redirect-urls
+
+last_reviewed: "2026-06-12"
+owner: maintainers
