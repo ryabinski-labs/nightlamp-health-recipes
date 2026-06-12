@@ -60,10 +60,10 @@ false_positives:
 
 triage:
   - Open the app URL in a browser and wait 30 seconds; if it wakes, the issue is free-plan sleeping — use Replit Deployments (static, autoscale, or reserved VM) to avoid it.
-  - Check the Replit Secrets tab: every secret the code reads must be present. Secrets are NOT exported as env vars to deployed static builds.
-  - Check the port: the app must bind to 0.0.0.0 on the port Replit exposes (usually 3000 or the PORT env var), not localhost.
-  - Custom domain: verify the CNAME or A record still points to Replit's deployment IP; Replit Deployments publish static assets to a CDN, not the dev container.
-  - Database: test the connection string directly (psql/redis-cli) to confirm it has not rotated.
+  - "Check the Replit Secrets tab: every secret the code reads must be present. Secrets are NOT exported as env vars to deployed static builds."
+  - "Check the port: the app must bind to 0.0.0.0 on the port Replit exposes (usually 3000 or the PORT env var), not localhost."
+  - "Custom domain: verify the CNAME or A record still points to Replit's deployment IP; Replit Deployments publish static assets to a CDN, not the dev container."
+  - "Database: test the connection string directly (psql/redis-cli) to confirm it has not rotated."
 
 alert_routing:
   severity: ticket

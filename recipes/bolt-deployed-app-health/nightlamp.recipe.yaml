@@ -70,11 +70,11 @@ false_positives:
 
 triage:
   - Open the live URL in incognito and check the browser console for MISSING_ENV or auth errors.
-  - Netlify dashboard -> Site settings -> Environment variables: confirm every var the app needs exists.
-  - Supabase: Settings -> Applications — is the Bolt account connected? Is the database claimed?
-  - Netlify deploy log: did the last publish build succeed?
+  - "Netlify dashboard -> Site settings -> Environment variables: confirm every var the app needs exists."
+  - "Supabase: Settings -> Applications — is the Bolt account connected? Is the database claimed?"
+  - "Netlify deploy log: did the last publish build succeed?"
   - If forked recently, check for a NEW Netlify site and move env vars and custom domain to it.
-  - RLS: verify policies grant real users access; empty lists usually mean missing or wrong policies.
+  - "RLS: verify policies grant real users access; empty lists usually mean missing or wrong policies."
   - Rotate any key found in client bundles and move the call server-side.
 
 alert_routing:

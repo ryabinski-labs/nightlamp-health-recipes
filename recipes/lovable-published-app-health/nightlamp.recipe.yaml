@@ -69,8 +69,8 @@ false_positives:
 
 triage:
   - Open the published URL in incognito; watch the network panel for 401/403 on Supabase calls.
-  - Supabase: Settings -> Authentication -> URL Configuration — is your custom domain in Redirect URLs?
-  - Check RLS policies: do they grant access to real users (not just the service role)?
+  - "Supabase: Settings -> Authentication -> URL Configuration — is your custom domain in Redirect URLs?"
+  - "Check RLS policies: do they grant access to real users (not just the service role)?"
   - Compare env vars in the Lovable project settings vs what the published build expects.
   - Rotate any webhook secret that may have been reset by a republish.
 
