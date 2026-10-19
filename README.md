@@ -6,7 +6,7 @@
 
 [![Validate Recipes](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml/badge.svg)](https://github.com/GipsyChef/nightlamp-health-recipes/actions/workflows/validate-recipes.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Recipes](https://img.shields.io/badge/recipes-13-success.svg)](#available-recipes)
+[![Recipes](https://img.shields.io/badge/recipes-17-success.svg)](#available-recipes)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Tool-agnostic](https://img.shields.io/badge/works%20with-any%20synthetic%20monitor-orange.svg)](#use-a-recipe-with-any-other-tool)
 
@@ -29,7 +29,7 @@ lock-in.**
 
 | | |
 |---|---|
-| **What it is** | A library of 13 scenario-specific monitoring recipes (runbook + YAML manifest each). |
+| **What it is** | A library of 17 scenario-specific monitoring recipes (runbook + YAML manifest each). |
 | **Who it's for** | No-code founders and small teams running production apps without a dedicated SRE. |
 | **What you get** | Concrete monitors to set up, expected signals, false positives, a triage checklist, and alert routing — per failure mode. |
 | **Cost to start** | Copy a folder, swap in your domain, create the listed monitors. ~5 minutes per recipe. |
@@ -69,22 +69,25 @@ lock-in.**
 
 ## Available recipes
 
-| Scenario | When it bites | Recipe |
-|---|---|---|
-| 💳 Bubble + Stripe live webhook | Switching Stripe to live mode silently drops `checkout.session.completed`. | [`bubble-stripe-live-webhook`](recipes/bubble-stripe-live-webhook/) |
-| 🛒 Checkout path | The Buy button page goes blank, slow, or 500s right before payment. | [`checkout-path`](recipes/checkout-path/) |
-| 🔐 Auth / login journey | Login form renders but submission no longer redirects. | [`auth-login-journey`](recipes/auth-login-journey/) |
-| 📥 Lead form delivery | Form posts succeed but the lead never lands in the CRM/sheet/email. | [`lead-form-delivery`](recipes/lead-form-delivery/) |
-| 🌐 Custom domain / DNS cutover | A DNS edit moved customers to a misconfigured origin. | [`custom-domain-dns-cutover`](recipes/custom-domain-dns-cutover/) |
-| 🔒 SSL certificate expiry | The cert quietly expires on a subdomain you forgot existed. | [`ssl-expiry`](recipes/ssl-expiry/) |
-| ⏰ Cron / heartbeat | A scheduled job stops running and no one notices for a week. | [`cron-heartbeat`](recipes/cron-heartbeat/) |
-| 🔄 Control-plane self-convergence | The reconcile loop dies, silently no-ops, or rolls back and drift goes unreconciled. | [`control-plane-converge`](recipes/control-plane-converge/) |
-| 🔌 Third-party API canary | A vendor (Stripe, Twilio, OpenAI, Mapbox) degrades or rate-limits you. | [`third-party-api-canary`](recipes/third-party-api-canary/) |
-| 🖼️ Homepage visual regression | A theme/CSS deploy makes the landing page render blank or broken. | [`homepage-visual-regression`](recipes/homepage-visual-regression/) |
-| 🔁 Webhook response-code drift | An inbound webhook starts returning 2xx but no longer does the work. | [`webhook-response-code-drift`](recipes/webhook-response-code-drift/) |
-| ✉️ Email magic-link delivery | The login email or OTP stops arriving, so customers can't get in. | [`email-magic-link-delivery`](recipes/email-magic-link-delivery/) |
-| 🚨 Error-pipeline ingestion | A deploy drops the SDK or rotates the DSN, so exceptions raise no alerts. | [`error-pipeline-ingestion`](recipes/error-pipeline-ingestion/) |
-| 📡 Log-pipeline silence | The log shipper or CloudWatch subscription dies and you go blind. | [`log-pipeline-silence`](recipes/log-pipeline-silence/) |
+| Scenario | When it bites | Recipe | Start free |
+|---|---|---|---|
+| 🧪 Lovable published app health | A Lovable app works in preview but breaks after publishing — blank screen, auth loops, RLS-blocked data, or webhook drift. | [`lovable-published-app-health`](recipes/lovable-published-app-health/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dlovable-published-app-health) |
+| 🧪 Bolt deployed app health | A bolt.new app works in the editor but breaks once published to Netlify — blank screen, missing data, webhook 401, or exposed keys. | [`bolt-deployed-app-health`](recipes/bolt-deployed-app-health/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dbolt-deployed-app-health) |
+| 🧪 Replit deployment health | A Replit deployment fails after Run worked — sleeping apps, missing secrets, or data lost on restart. | [`replit-deployment-health`](recipes/replit-deployment-health/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dreplit-deployment-health) |
+| 💳 Bubble + Stripe live webhook | Switching Stripe to live mode silently drops `checkout.session.completed`. | [`bubble-stripe-live-webhook`](recipes/bubble-stripe-live-webhook/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dbubble-stripe-live-webhook) |
+| 🛒 Checkout path | The Buy button page goes blank, slow, or 500s right before payment. | [`checkout-path`](recipes/checkout-path/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dcheckout-path) |
+| 🔐 Auth / login journey | Login form renders but submission no longer redirects. | [`auth-login-journey`](recipes/auth-login-journey/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dauth-login-journey) |
+| 📥 Lead form delivery | Form posts succeed but the lead never lands in the CRM/sheet/email. | [`lead-form-delivery`](recipes/lead-form-delivery/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dlead-form-delivery) |
+| 🌐 Custom domain / DNS cutover | A DNS edit moved customers to a misconfigured origin. | [`custom-domain-dns-cutover`](recipes/custom-domain-dns-cutover/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dcustom-domain-dns-cutover) |
+| 🔒 SSL certificate expiry | The cert quietly expires on a subdomain you forgot existed. | [`ssl-expiry`](recipes/ssl-expiry/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dssl-expiry) |
+| ⏰ Cron / heartbeat | A scheduled job stops running and no one notices for a week. | [`cron-heartbeat`](recipes/cron-heartbeat/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dcron-heartbeat) |
+| 🔄 Control-plane self-convergence | The reconcile loop dies, silently no-ops, or rolls back and drift goes unreconciled. | [`control-plane-converge`](recipes/control-plane-converge/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dcontrol-plane-converge) |
+| 🔌 Third-party API canary | A vendor (Stripe, Twilio, OpenAI, Mapbox) degrades or rate-limits you. | [`third-party-api-canary`](recipes/third-party-api-canary/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dthird-party-api-canary) |
+| 🖼️ Homepage visual regression | A theme/CSS deploy makes the landing page render blank or broken. | [`homepage-visual-regression`](recipes/homepage-visual-regression/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dhomepage-visual-regression) |
+| 🔁 Webhook response-code drift | An inbound webhook starts returning 2xx but no longer does the work. | [`webhook-response-code-drift`](recipes/webhook-response-code-drift/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dwebhook-response-code-drift) |
+| ✉️ Email magic-link delivery | The login email or OTP stops arriving, so customers can't get in. | [`email-magic-link-delivery`](recipes/email-magic-link-delivery/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Demail-magic-link-delivery) |
+| 🚨 Error-pipeline ingestion | A deploy drops the SDK or rotates the DSN, so exceptions raise no alerts. | [`error-pipeline-ingestion`](recipes/error-pipeline-ingestion/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Derror-pipeline-ingestion) |
+| 📡 Log-pipeline silence | The log shipper or CloudWatch subscription dies and you go blind. | [`log-pipeline-silence`](recipes/log-pipeline-silence/) | [Monitor this flow free](https://nightlamp.app/signup?redirect=%2Fwelcome%3Frecipe%3Dlog-pipeline-silence) |
 
 Recipes are organized by **scenario** (the thing that actually breaks), not by
 check primitive — so you start from the symptom your customer reports.
@@ -97,6 +100,12 @@ There's nothing to compile or install to *use* a recipe. The whole flow is:
 **read the runbook → copy the YAML → swap in your values → create the monitors.**
 
 ### Use a recipe with Nightlamp
+
+Every recipe in this repository has a one-click onboarding path in the
+[Nightlamp recipe catalogue](https://nightlamp.app/recipes). Pick the flow, sign
+in, confirm the app URL, and Nightlamp creates the app plus the recipe's primary
+monitor — or opens the monitor form with the recipe's fields prefilled. The trial
+is 14 days with no card. The table above links each recipe straight to that path.
 
 1. Open the recipe's `nightlamp.recipe.yaml` (e.g. [`recipes/ssl-expiry/nightlamp.recipe.yaml`](recipes/ssl-expiry/nightlamp.recipe.yaml)).
 2. Replace `{{...}}` placeholders with your domain, paths, and non-secret identifiers.
